@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+
+  auth-service:
+    build: ./services/auth-service
+    ports:
+      - "3001:3001"
+
+  qr-service:
+    build: ./services/qr-service
+    ports:
+      - "3002:3002"
+
+  postgres:
+    image: postgres:16
+
+  redis:
+    image: redis
+
+  rabbitmq:
+    image: rabbitmq:3-management
