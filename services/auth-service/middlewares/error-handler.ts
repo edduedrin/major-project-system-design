@@ -11,7 +11,7 @@ class ErrorHandler {
     next: NextFunction
   ) {
     if (err instanceof TokenExpiredError) {
-      err.statusCode = 440;
+      err.statusCode = 440
       err.responseCode = 440;
       err.responseMessage = "Session expired, Please re-intiate";
     }
@@ -20,7 +20,7 @@ class ErrorHandler {
       err instanceof JsonWebTokenError &&
       (err?.message == "invalid signature" || err?.message == "invalid token")
     ) {
-      err.statusCode = 401;
+      err.statusCode = 401
       err.responseCode = 401;
       err.responseMessage = "Invalid session, Please re-intiate";
     }
