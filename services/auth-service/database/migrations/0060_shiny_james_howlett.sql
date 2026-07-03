@@ -1,3 +1,0 @@
--- ALTER TABLE "tbl_retailer_mapping" DROP CONSTRAINT "tbl_retailer_mapping_workshop_id_tbl_workshop_workshop_id_fk";
--- --> statement-breakpoint
--- ALTER TABLE "tbl_retailer_mapping" ALTER COLUMN "workshop_id" DROP NOT NULL;

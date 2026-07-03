@@ -1,1 +1,0 @@
-ALTER TABLE "tbl_purchasing_retailers" RENAME COLUMN "retailer_id" TO "purchasing_retailer_id";
