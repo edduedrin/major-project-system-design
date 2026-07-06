@@ -11,7 +11,7 @@ async function bootstrap() {
     // Assign the live drizzle instance — all controllers access this at request time, never at import time
     database = DatabaseConnection.db;
 
-    const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
+    const PORT = 3001;
     const server = app.listen(PORT);
 
     // Graceful shutdown handling

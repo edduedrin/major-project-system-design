@@ -61,7 +61,7 @@ class App {
         ],
       })
     );
-    this.app.options("*", cors());
+    this.app.options("{*splat}", cors());
   }
 
   private logger(): void {
