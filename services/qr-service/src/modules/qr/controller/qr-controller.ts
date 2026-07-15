@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import qrService from "../service/qr-service";
+import { publishJob } from "../../../services/rabbitMq/publisher";
 
 export class QrController {
   async generate(req: Request, res: Response, next: NextFunction) {
@@ -81,6 +82,35 @@ export class QrController {
       const buffer = await qrService.getQrCodeImage(serialNumber as string);
       res.setHeader("Content-Type", "image/png");
       res.status(200).send(buffer);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async enqueueQrGeneration(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { productId, productName, quantity } = req.body;
+      const createdBy = req.user?.userId;
+
+      const job = await qrService.enqueueQrGeneration(
+        { productId, productName, quantity },
+        createdBy
+      );
+
+      // Publish job to RabbitMQ queue
+      await publishJob({
+        type: "qr",
+        payload: {
+          payload: { productId, productName, quantity },
+          jobId: job.id,
+          createdBy
+        }
+      });
+
+      res.status(200).json({
+        code: 200,
+        message: "QR code generation in progress. Please check after some time."
+      });
     } catch (error) {
       next(error);
     }

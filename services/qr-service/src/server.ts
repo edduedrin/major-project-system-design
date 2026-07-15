@@ -1,11 +1,29 @@
 import App from "./app";
 import { DatabaseConnection } from "./database/database-connection";
 import { drizzle } from "drizzle-orm/postgres-js";
+import { connectRabbit, registerConsumers, waitForRabbit } from "./services/rabbitMq/connection";
+import { setupInfrastructure } from "./services/rabbitMq/setUp";
+import { startAllConsumers } from "./services/rabbitMq/consumers/startConsumers";
 
 export let database: ReturnType<typeof drizzle>;
 
 async function bootstrap() {
   try {
+    // 1️⃣ Connect to RabbitMQ (will auto-start consumers)
+    await connectRabbit();
+
+    // 2️⃣ Wait until RabbitMQ is ready
+    await waitForRabbit();
+
+    // 3️⃣ Setup Exchanges + Queues
+    await setupInfrastructure();
+
+    // 4️⃣ Start Consumers
+    await startAllConsumers();
+
+    // 5️⃣ Register consumer bootstrap recovery
+    registerConsumers(startAllConsumers);
+
     const app = new App();
 
     // Assign the live drizzle instance — all controllers access this at request time, never at import time

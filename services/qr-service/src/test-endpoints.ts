@@ -1,4 +1,5 @@
 import axios from "axios";
+import jwt from "jsonwebtoken";
 
 const BASE_URL = "http://localhost:3002";
 
@@ -110,6 +111,28 @@ async function runTests() {
     console.log(`8. Testing QR Code PNG rendering for: ${testCode}...`);
     const imgRes = await axios.get(`${BASE_URL}/qr/code/${testCode}`, { responseType: "arraybuffer" });
     console.log(`Status: ${imgRes.status}, Content-Type: ${imgRes.headers["content-type"]}`);
+    console.log("-------------------------------------------\n");
+
+    // 9. Asynchronous Enqueue QR Code Generation
+    console.log("9. Testing Asynchronous Enqueue QR Code Generation...");
+    const mockToken = jwt.sign(
+      { userId: "user-123", email: "admin@example.com", mobile: "9876543210", type: "access" },
+      process.env.JWT_ACCESS_SECRET || "default_access_secret_123_abc",
+      { expiresIn: "1h" }
+    );
+    const enqueueRes = await axios.post(`${BASE_URL}/qr/qrs`, 
+      {
+        productId: "PRD-QUEUE-999",
+        productName: "Asynchronous Headphones",
+        quantity: 5
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${mockToken}`
+        }
+      }
+    );
+    console.log(`Status: ${enqueueRes.status}, Response:`, enqueueRes.data);
     console.log("-------------------------------------------\n");
 
     console.log("=== All Tests Completed Successfully ===");

@@ -238,6 +238,28 @@ export class QrService {
       margin: 2,
     });
   }
+
+  async enqueueQrGeneration(
+    data: {
+      productId?: string;
+      productName?: string;
+      quantity: number;
+    },
+    createdBy?: string
+  ) {
+    const quantity = Math.max(data.quantity || 1, 1);
+    const productId = data.productId || null;
+    const productName = data.productName || null;
+
+    const job = await qrRepository.createJob({
+      productId,
+      productName,
+      quantity,
+      createdBy: createdBy || null,
+    });
+
+    return job;
+  }
 }
 
 export default new QrService();

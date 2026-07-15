@@ -1,5 +1,5 @@
 import { DatabaseConnection } from "../../../database/database-connection";
-import { productUniqueCodes, qrScanHistory } from "../../../database/schema/schema";
+import { productUniqueCodes, qrScanHistory, qrGenerationJobs } from "../../../database/schema/schema";
 import { eq, and, sql } from "drizzle-orm";
 
 export class QrRepository {
@@ -92,6 +92,39 @@ export class QrRepository {
     const [result] = await this.db
       .insert(qrScanHistory)
       .values(data)
+      .returning();
+    return result;
+  }
+
+  async createJob(data: {
+    productId?: string | null;
+    productName?: string | null;
+    quantity: number;
+    createdBy?: string | null;
+  }) {
+    const [result] = await this.db
+      .insert(qrGenerationJobs)
+      .values(data)
+      .returning();
+    return result;
+  }
+
+  async getPendingJobs() {
+    return await this.db
+      .select()
+      .from(qrGenerationJobs)
+      .where(eq(qrGenerationJobs.status, "PENDING"));
+  }
+
+  async updateJobStatus(jobId: string, status: string, error?: string | null) {
+    const [result] = await this.db
+      .update(qrGenerationJobs)
+      .set({
+        status,
+        error: error || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(qrGenerationJobs.id, jobId))
       .returning();
     return result;
   }

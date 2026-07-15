@@ -27,6 +27,7 @@ declare global {
   namespace Express {
     interface Request {
       metaData: MetaData;
+      user?: any;
     }
   }
 }

@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, integer, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, integer, timestamp, text } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const productUniqueCodes = pgTable('product_unique_codes', {
@@ -26,6 +26,18 @@ export const qrScanHistory = pgTable('qr_scan_history', {
   longitude: varchar('longitude', { length: 50 }),
 });
 
+export const qrGenerationJobs = pgTable('qr_generation_jobs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  productId: varchar('product_id', { length: 255 }),
+  productName: varchar('product_name', { length: 255 }),
+  quantity: integer('quantity').notNull(),
+  status: varchar('status', { length: 50 }).default('PENDING').notNull(),
+  error: text('error'),
+  createdBy: uuid('created_by'),
+  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
+});
+
 export const productUniqueCodesRelations = relations(productUniqueCodes, ({ many }) => ({
   scanHistories: many(qrScanHistory),
 }));
@@ -36,3 +48,4 @@ export const qrScanHistoryRelations = relations(qrScanHistory, ({ one }) => ({
     references: [productUniqueCodes.id],
   }),
 }));
+
