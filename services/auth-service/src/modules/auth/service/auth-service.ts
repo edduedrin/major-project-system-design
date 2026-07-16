@@ -12,22 +12,30 @@ import { generateResetToken, verifyToken } from "../../../utils/jwt-helper";
 
 export class AuthService {
   async register(data: {
-    email?: string;
-    mobile?: string;
+    email: string;
+    mobile: string;
     password?: string;
     pin?: string;
   }) {
     const { email, mobile, password, pin } = data;
 
-    if (!email && !mobile) {
+    if (!email) {
       throw new CustomError({
         statusCode: 400,
         responseCode: 400,
-        responseMessage: "Either email or mobile must be provided",
+        responseMessage: "Email is required",
       });
     }
 
-    if (email && !validateEmail(email)) {
+    if (!mobile) {
+      throw new CustomError({
+        statusCode: 400,
+        responseCode: 400,
+        responseMessage: "Mobile number is required",
+      });
+    }
+
+    if (!validateEmail(email)) {
       throw new CustomError({
         statusCode: 400,
         responseCode: 400,
@@ -35,7 +43,7 @@ export class AuthService {
       });
     }
 
-    if (mobile && !validateMobile(mobile)) {
+    if (!validateMobile(mobile)) {
       throw new CustomError({
         statusCode: 400,
         responseCode: 400,
@@ -52,27 +60,23 @@ export class AuthService {
     }
 
     // Check email uniqueness
-    if (email) {
-      const existingUser = await authRepository.findUserByEmail(email);
-      if (existingUser) {
-        throw new CustomError({
-          statusCode: 400,
-          responseCode: 400,
-          responseMessage: "Email is already registered",
-        });
-      }
+    const existingUserByEmail = await authRepository.findUserByEmail(email);
+    if (existingUserByEmail) {
+      throw new CustomError({
+        statusCode: 400,
+        responseCode: 400,
+        responseMessage: "Email is already registered",
+      });
     }
 
     // Check mobile uniqueness
-    if (mobile) {
-      const existingUser = await authRepository.findUserByMobile(mobile);
-      if (existingUser) {
-        throw new CustomError({
-          statusCode: 400,
-          responseCode: 400,
-          responseMessage: "Mobile number is already registered",
-        });
-      }
+    const existingUserByMobile = await authRepository.findUserByMobile(mobile);
+    if (existingUserByMobile) {
+      throw new CustomError({
+        statusCode: 400,
+        responseCode: 400,
+        responseMessage: "Mobile number is already registered",
+      });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -210,9 +214,7 @@ export class AuthService {
     const otp = await otpService.sendOtp(user.id, user.mobile, "SIGNIN");
 
     return {
-      message: "OTP sent successfully",
-      // Only return OTP in response for development convenience
-      ...(process.env.NODE_ENV === "development" ? { otp } : {}),
+      message: "OTP sent successfully"
     };
   }
 

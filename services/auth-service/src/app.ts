@@ -103,7 +103,7 @@ class App {
 
   public listen(port: number) {
     return this.app.listen(port, () => {
-      console.log(`\nZF Server is running on port number : ${port} 🚀🚀🚀\n`);
+      console.log(`\nAuth Server is running on port number : ${port} 🚀🚀🚀\n`);
     });
   }
 }
