@@ -2,6 +2,7 @@ import crypto from "crypto";
 import QRCode from "qrcode";
 import qrRepository from "../repository/qr-repository";
 import { CustomError } from "../../../types";
+import { publishJob } from "../../../services/rabbitMq/publisher";
 
 // Helper to generate a unique readable serial number
 function generateSerialNumber(): string {
@@ -19,14 +20,23 @@ export class QrService {
     productId?: string;
     productName?: string;
     quantity?: number;
+    createdBy?: string;
   }) {
     const productId = data.productId || null;
     const productName = data.productName || null;
     const quantity = Math.min(Math.max(data.quantity || 1, 1), 100);
 
+    // 1. Create a tracking job in database
+    const job = await qrRepository.createJob({
+      productId,
+      productName,
+      quantity,
+      createdBy: data.createdBy || null,
+    });
+
     const serialNumbers: string[] = [];
 
-    // Ensure we generate unique serial numbers that don't collision in DB
+    // 2. Generate unique serial numbers
     while (serialNumbers.length < quantity) {
       const sn = generateSerialNumber();
       if (!serialNumbers.includes(sn)) {
@@ -37,7 +47,7 @@ export class QrService {
       }
     }
 
-    // Map to db objects
+    // 3. Map and store only serial numbers in database
     const insertData = serialNumbers.map((sn) => ({
       serialNumber: sn,
       productId,
@@ -45,26 +55,34 @@ export class QrService {
       status: "GENERATED",
     }));
 
-    // Bulk insert into database
     const createdRecords = await qrRepository.createCodes(insertData);
 
-    // Generate QR Code base64 data url for each created code
-    const results = await Promise.all(
-      createdRecords.map(async (record) => {
-        const qrCodeUrl = await QRCode.toDataURL(record.serialNumber);
-        return {
-          id: record.id,
-          serialNumber: record.serialNumber,
-          productId: record.productId,
-          productName: record.productName,
-          status: record.status,
-          qrCodeUrl,
-          createdAt: record.createdAt,
-        };
-      })
-    );
+    // 4. Publish serial numbers & job data to RabbitMQ queue for async QR & PDF processing
+    await publishJob({
+      type: "qr",
+      payload: {
+        jobId: job.id,
+        productId,
+        productName,
+        quantity,
+        serialNumbers,
+        createdBy: data.createdBy,
+      },
+    });
 
-    return results;
+    return {
+      jobId: job.id,
+      status: job.status,
+      quantity,
+      productId,
+      productName,
+      codes: createdRecords.map((rec) => ({
+        id: rec.id,
+        serialNumber: rec.serialNumber,
+        status: rec.status,
+        createdAt: rec.createdAt,
+      })),
+    };
   }
 
   async getCodes(

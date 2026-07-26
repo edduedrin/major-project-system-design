@@ -92,24 +92,17 @@ export class QrController {
       const { productId, productName, quantity } = req.body;
       const createdBy = req.user?.userId;
 
-      const job = await qrService.enqueueQrGeneration(
-        { productId, productName, quantity },
-        createdBy
-      );
-
-      // Publish job to RabbitMQ queue
-      await publishJob({
-        type: "qr",
-        payload: {
-          payload: { productId, productName, quantity },
-          jobId: job.id,
-          createdBy
-        }
+      const result = await qrService.generateCodes({
+        productId,
+        productName,
+        quantity,
+        createdBy,
       });
 
       res.status(200).json({
         code: 200,
-        message: "QR code generation in progress. Please check after some time."
+        message: "Serial numbers generated and queued for PDF processing.",
+        data: result,
       });
     } catch (error) {
       next(error);

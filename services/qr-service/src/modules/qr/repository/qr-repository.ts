@@ -128,6 +128,29 @@ export class QrRepository {
       .returning();
     return result;
   }
+
+  async updateJobPdfDetails(jobId: string, pdfFileName: string, pdfPath: string, status: string = "COMPLETED") {
+    const [result] = await this.db
+      .update(qrGenerationJobs)
+      .set({
+        status,
+        pdfFileName,
+        pdfPath,
+        updatedAt: new Date(),
+      })
+      .where(eq(qrGenerationJobs.id, jobId))
+      .returning();
+    return result;
+  }
+
+  async getJobById(jobId: string) {
+    const result = await this.db
+      .select()
+      .from(qrGenerationJobs)
+      .where(eq(qrGenerationJobs.id, jobId))
+      .limit(1);
+    return result[0] || null;
+  }
 }
 
 export default new QrRepository();

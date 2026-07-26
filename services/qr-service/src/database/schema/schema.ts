@@ -33,6 +33,8 @@ export const qrGenerationJobs = pgTable('qr_generation_jobs', {
   quantity: integer('quantity').notNull(),
   status: varchar('status', { length: 50 }).default('PENDING').notNull(),
   error: text('error'),
+  pdfFileName: varchar('pdf_file_name', { length: 255 }),
+  pdfPath: varchar('pdf_path', { length: 500 }),
   createdBy: uuid('created_by'),
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),

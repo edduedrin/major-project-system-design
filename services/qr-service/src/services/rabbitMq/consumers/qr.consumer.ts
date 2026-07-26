@@ -1,6 +1,6 @@
 import { createConsumerChannel } from "../connection";
-import qrService from "../../../modules/qr/service/qr-service";
 import qrRepository from "../../../modules/qr/repository/qr-repository";
+import { generateQrPdf } from "../../../utils/pdf-generator";
 
 export async function startQrConsumer() {
     const channel = await createConsumerChannel();
@@ -16,41 +16,46 @@ export async function startQrConsumer() {
             if (!msg) return;
 
             try {
-                const data = JSON.parse(msg.content.toString());
-                const payload = data.payload?.payload;
-                const jobId = data.payload?.jobId;
-                const createdBy = data.payload?.createdBy;
+                const rawData = JSON.parse(msg.content.toString());
+                const payloadData = rawData.payload?.payload || rawData.payload || rawData;
+                
+                const jobId = payloadData?.jobId;
+                const productId = payloadData?.productId;
+                const productName = payloadData?.productName;
+                const serialNumbers: string[] = payloadData?.serialNumbers || [];
 
-                const productId = payload?.productId;
-                const productName = payload?.productName;
-                const quantity = payload?.quantity;
+                console.log(`Processing QR PDF job [${jobId}]: serialNumbersCount=${serialNumbers.length}, productId=${productId}`);
 
-                console.log(`Processing QR job: quantity=${quantity}, productId=${productId}`);
-
-                // Update job status in DB if jobId is provided
                 if (jobId) {
                     await qrRepository.updateJobStatus(jobId, "PROCESSING");
                 }
 
-                // Generate codes and insert them
-                await qrService.generateCodes({
-                    productId,
-                    productName,
-                    quantity
-                });
+                if (serialNumbers.length > 0 && jobId) {
+                    // Generate QR codes & PDF document asynchronously
+                    const { pdfFileName, pdfPath } = await generateQrPdf({
+                        jobId,
+                        productId,
+                        productName,
+                        serialNumbers,
+                    });
 
-                if (jobId) {
+                    console.log(`PDF successfully generated: ${pdfFileName} at ${pdfPath}`);
+
+                    // Update database record with generated PDF details and status COMPLETED
+                    await qrRepository.updateJobPdfDetails(jobId, pdfFileName, pdfPath, "COMPLETED");
+                } else if (jobId) {
                     await qrRepository.updateJobStatus(jobId, "COMPLETED");
                 }
 
                 channel.ack(msg);
-                console.log(`Job successfully processed and acknowledged.`);
+                console.log(`Job [${jobId}] successfully processed and acknowledged.`);
             } catch (error: any) {
                 console.error("QR Consumer processing failed:", error);
                 
                 try {
-                    const data = JSON.parse(msg.content.toString());
-                    const jobId = data.payload?.jobId;
+                    const rawData = JSON.parse(msg.content.toString());
+                    const payloadData = rawData.payload?.payload || rawData.payload || rawData;
+                    const jobId = payloadData?.jobId;
                     if (jobId) {
                         await qrRepository.updateJobStatus(jobId, "FAILED", error.message || String(error));
                     }
