@@ -1,56 +1,46 @@
-import { pgTable, uuid, varchar, integer, timestamp, text } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, integer, numeric, timestamp, jsonb, text } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
-export const redemptions = pgTable('redemptions', {
+export const bankDetails = pgTable('bank_details', {
   id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').notNull(),
-  redemptionCode: varchar('redemption_code', { length: 100 }).unique().notNull(),
-  totalPoints: integer('total_points').notNull(),
-  status: varchar('status', { length: 50 }).default('PENDING').notNull(), // 'PENDING', 'APPROVED', 'REJECTED', 'COMPLETED'
-  remarks: text('remarks'),
+  userId: uuid('user_id').notNull().unique(),
+  accountHolderName: varchar('account_holder_name', { length: 255 }).notNull(),
+  accountNumber: varchar('account_number', { length: 255 }).notNull(),
+  ifscCode: varchar('ifsc_code', { length: 50 }).notNull(),
+  bankName: varchar('bank_name', { length: 255 }).notNull(),
+  branch: varchar('branch', { length: 255 }),
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
 });
 
-export const redemptionItems = pgTable('redemption_items', {
+export const upiDetails = pgTable('upi_details', {
   id: uuid('id').defaultRandom().primaryKey(),
-  redemptionId: uuid('redemption_id')
-    .references(() => redemptions.id, { onDelete: 'cascade' })
-    .notNull(),
-  productId: varchar('product_id', { length: 255 }).notNull(),
-  productName: varchar('product_name', { length: 255 }),
-  pointsPerUnit: integer('points_per_unit').notNull(),
-  quantity: integer('quantity').default(1).notNull(),
+  userId: uuid('user_id').notNull().unique(),
+  upiId: varchar('upi_id', { length: 255 }).notNull(),
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
 });
 
-export const redemptionHistory = pgTable('redemption_history', {
+export const redemptionRequests = pgTable('redemption_requests', {
   id: uuid('id').defaultRandom().primaryKey(),
-  redemptionId: uuid('redemption_id')
-    .references(() => redemptions.id, { onDelete: 'cascade' })
-    .notNull(),
-  previousStatus: varchar('previous_status', { length: 50 }),
-  newStatus: varchar('new_status', { length: 50 }).notNull(),
-  changedBy: uuid('changed_by'),
-  comment: text('comment'),
+  userId: uuid('user_id').notNull(),
+  redemptionType: varchar('redemption_type', { length: 50 }).notNull(), // 'BANK', 'UPI'
+  walletPoints: integer('wallet_points').notNull(),
+  amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
+  status: varchar('status', { length: 50 }).default('PENDING').notNull(), // 'PENDING', 'APPROVED', 'REJECTED', 'PAID'
+  bankAccountSnapshot: jsonb('bank_account_snapshot'),
+  upiSnapshot: text('upi_snapshot'),
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
 });
 
-export const redemptionsRelations = relations(redemptions, ({ many }) => ({
-  items: many(redemptionItems),
-  history: many(redemptionHistory),
-}));
+export const userWallets = pgTable('user_wallets', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull().unique(),
+  balance: integer('balance').default(0).notNull(),
+  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
+});
 
-export const redemptionItemsRelations = relations(redemptionItems, ({ one }) => ({
-  redemption: one(redemptions, {
-    fields: [redemptionItems.redemptionId],
-    references: [redemptions.id],
-  }),
-}));
-
-export const redemptionHistoryRelations = relations(redemptionHistory, ({ one }) => ({
-  redemption: one(redemptions, {
-    fields: [redemptionHistory.redemptionId],
-    references: [redemptions.id],
-  }),
-}));
+// Legacy redemptions table alias for backwards compatibility if needed
+export const redemptions = redemptionRequests;

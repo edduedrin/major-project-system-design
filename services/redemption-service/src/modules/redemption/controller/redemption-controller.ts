@@ -1,18 +1,34 @@
 import { Request, Response, NextFunction } from "express";
 import redemptionService from "../service/redemption-service";
+import { CustomError } from "../../../types";
 
 export class RedemptionController {
+  private getUserId(req: Request): string {
+    const userId = req.user?.userId || (req.headers["x-user-id"] as string) || req.query.userId || req.body.userId;
+    if (!userId) {
+      throw new CustomError({
+        statusCode: 401,
+        responseCode: 401,
+        responseMessage: "User identification missing. Please provide authentication token or X-User-Id header.",
+      });
+    }
+    return String(userId);
+  }
+
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = req.user?.userId || req.body.userId;
-      const result = await redemptionService.createRedemption({
-        ...req.body,
+      const userId = this.getUserId(req);
+      const { redemptionType, points, walletPoints } = req.body;
+
+      const result = await redemptionService.createRedemptionRequest({
         userId,
+        redemptionType,
+        points: points !== undefined ? points : walletPoints,
       });
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
-        message: "Redemption initiated successfully",
+        message: "Redemption request created successfully",
         data: result,
       });
     } catch (error) {
@@ -22,16 +38,19 @@ export class RedemptionController {
 
   async getRedemptions(req: Request, res: Response, next: NextFunction) {
     try {
-      const { userId, status, page, limit } = req.query;
+      const { userId: queryUserId, status, page, limit } = req.query;
+      const authUserId = req.user?.userId || (req.headers["x-user-id"] as string);
+      const targetUserId = (queryUserId as string) || authUserId;
+
       const filters = {
-        userId: userId as string,
+        userId: targetUserId,
         status: status as string,
       };
       const activePage = page ? parseInt(page as string, 10) : 1;
       const activeLimit = limit ? parseInt(limit as string, 10) : 10;
 
       const result = await redemptionService.getRedemptions(filters, activePage, activeLimit);
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         ...result,
       });
@@ -44,7 +63,7 @@ export class RedemptionController {
     try {
       const { id } = req.params;
       const result = await redemptionService.getRedemptionById(id as string);
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: result,
       });
@@ -56,11 +75,10 @@ export class RedemptionController {
   async updateStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const { status, comment } = req.body;
-      const changedBy = req.user?.userId;
+      const { status } = req.body;
 
-      const result = await redemptionService.updateStatus(id as string, status, changedBy, comment);
-      res.status(200).json({
+      const result = await redemptionService.updateStatus(id as string, status);
+      return res.status(200).json({
         success: true,
         message: "Redemption status updated successfully",
         data: result,
