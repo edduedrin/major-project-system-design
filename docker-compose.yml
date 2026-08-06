@@ -12,6 +12,11 @@ services:
     ports:
       - "3002:3002"
 
+  communication-service:
+    build: ./services/communication-service
+    ports:
+      - "3005:3005"
+
   postgres:
     image: postgres:16
 
